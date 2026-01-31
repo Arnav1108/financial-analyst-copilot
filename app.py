@@ -1,22 +1,41 @@
 from dotenv import load_dotenv
 load_dotenv()
 
-from src.chunking import chunk_doc
-from src.vectorstore import building_vector
-from src.loader import load_pdf
 
-docs = load_pdf("data/raw_docs/saudi-aramco-q3.pdf")
-chunks = chunk_doc(docs)
+from src.llm import get_llm
+from src.vectorstore import load_vectorstore
+from src.qa import ANSWER_PROMPT,format_doc,COMPARE_PROMPT
+from src.confidence import compute_confidence, confidence_label
 
-print("Chunks" , len(chunks))
+vector_store = load_vectorstore()
+llm = get_llm()
+chat_his = ""
 
-vector_store = building_vector(chunks)
-retriver = vector_store.as_retriever(search_kwargs={"k":3})
+while True:
+    ques = input("\n Ask your ques (or exit): ")
 
-results = retriver.invoke("what drove the revenue growth?")
+    results_with_score = vector_store.similarity_search_with_score(
+    ques,
+    k=5
+    )
 
-for r in results:
-    print("----")
-    print(r.page_content[:300])
+    results = [doc for doc, _ in results_with_score]
+    distances = [score for _, score in results_with_score]
 
+    context = format_doc(results)
 
+    prompt = COMPARE_PROMPT.format(
+        context=context,
+        question=ques,
+        chat_history=chat_his
+    )
+
+    response = llm.invoke(prompt)
+
+    chat_his += f"\nUser:{ques}\nAI:{response.content}\n"
+
+    score = compute_confidence(distances)
+    label = confidence_label(score)
+
+    print(response.content)
+    print(f"\nConfidence: {score}/10 — {label}")

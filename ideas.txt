@@ -1,0 +1,8 @@
+. have ai agents to do most of the things like , fetching the appropriate document or news or latest trend  
+. also being able to retrives realtime stock snapshots
+
+
+  ques -
+   - feedback , mistakes , ideas , 
+   - is this enough for me to add in resume 
+   - 
